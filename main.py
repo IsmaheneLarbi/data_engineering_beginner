@@ -59,7 +59,7 @@ if __name__ == "__main__":
         "Authorization": f"Bearer {TOKEN}"
     }
     today = datetime.now()
-    yesterday = today - timedelta(days=5)
+    yesterday = today - timedelta(days=1)
     yesterday_unix_timestamp = int(yesterday.timestamp() * 1000)
     response = requests.get(f"https://api.spotify.com/v1/\
 me/player/recently-played?after={yesterday_unix_timestamp}",
