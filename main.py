@@ -1,15 +1,21 @@
 import requests
 import pandas as pd
-import numpy as np
+import sqlalchemy
+import sqlite3
 
 
 from datetime import datetime, timedelta
+# from sqlalchemy.orm import sessionmaker
+from sqlalchemy import MetaData, Table, Column, String
 
-# DATABASE_LOCATION = "sqlite://"
-TOKEN = "BQAzEL4kQ1OuIhOnBALwuTOhVPYpDriZPP7vMFW56JKTeW-Tcow4-3_nRWJlYQNesogUg8F0avl950APNFxXvq8dmJlMrxEOHjGGTvZBNfWo9LCUsT7Ujf2gd-dNxIBydDPUvdHpeqdp5kp4WY-4U6zME5nxLvFeoMB8"
 
 
-def transform(df: pd.DataFrame) -> bool:
+# DATABASE_LOCATION = "sqlite:///my_songs_playlist.sqlite"
+DATABASE_LOCATION = "sqlite:///my_spotify_data.sqlite"
+TOKEN = "BQDsClMcVYe2dHm0npFYCSbOPztHT6JLW-mwCQAK5dbzDfkHOcYcOBNL0DqqF66S7R3grNszLeBAxCFv8KTKtWwuGkaVZon3rUxQqeeNV8WU7-4pjHzkmFbTEPtTDOSaBcG4h7OkiM5nJ4R0OD9Yd5ZXPg4nocPyTEuE"
+
+
+def is_data_valid(df: pd.DataFrame) -> bool:
     """Returns True if data is valid, False if not."""
     if df.empty:
         print("No songs downloaded. Finishing execution.")
@@ -23,9 +29,29 @@ def transform(df: pd.DataFrame) -> bool:
     # timestamps = df['timestamps'].tolist()
     # for timestamp in timestamps:
     #     if datetime.strptime(timestamp, "%Y-%m-%d") != yesterday:
-    #         raise Exception("At least one of the returned songs doesnt have a yesterday timestamp")
+    #         raise Exception("At least one of the returned songs doesnt
+    #  have a yesterday timestamp")
     return True
 
+
+def load(df:pd.DataFrame):
+    engine = sqlalchemy.create_engine(DATABASE_LOCATION)
+    con = engine.connect()
+    metadata = MetaData()
+    tracks = Table('my_played_tracks', metadata,\
+    Column('song', String),
+    Column('artist', String),
+    Column('played_at', String, primary_key=True),
+    Column('timestamp', String)
+    )
+    metadata.create_all(engine)
+    print("Created database successfully.")
+    try:
+        df.to_sql('my_played_tracks', engine, index=False, if_exists='append')
+    except:
+        print("Data already exists in the database.")
+    con.close()
+    print("Closed database successfully.")
 
 if __name__ == "__main__":
     headers = {
@@ -33,7 +59,7 @@ if __name__ == "__main__":
         "Authorization": f"Bearer {TOKEN}"
     }
     today = datetime.now()
-    yesterday = today - timedelta(days=1)
+    yesterday = today - timedelta(days=5)
     yesterday_unix_timestamp = int(yesterday.timestamp() * 1000)
     response = requests.get(f"https://api.spotify.com/v1/\
 me/player/recently-played?after={yesterday_unix_timestamp}",
@@ -44,7 +70,7 @@ me/player/recently-played?after={yesterday_unix_timestamp}",
     artists = []
     played_at = []
     timestamps = []
-    print(data)
+    # print(data)
     for item in data['items']:
         songs.append(item['track']['name'])
         albums.append(item['track']['album']['name'])
@@ -60,5 +86,6 @@ me/player/recently-played?after={yesterday_unix_timestamp}",
         'timestamps': timestamps
     }
     songs_df = pd.DataFrame(songs_dict)
-    print(songs_df)
-    print(transform(songs_df))
+    if is_data_valid(songs_df):
+        print("Data is valid, proceed to Load stage.")
+        load(songs_df)
