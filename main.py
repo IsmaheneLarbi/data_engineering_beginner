@@ -1,14 +1,31 @@
 import requests
 import pandas as pd
+import numpy as np
 
 
 from datetime import datetime, timedelta
 
 # DATABASE_LOCATION = "sqlite://"
-USER_ID = "Ismahene"
-TOKEN = "BQDj-Wk7kSJGznOxzKS8m1mJ9TfIUBo6HIWjPtsJUl3ybPzjFXooGcl_q1hE_\
-oUdIkbuEVMi9CW4xET0o1I4NRiRt_8tyYbVgErrRDnIwL1PcuJ0e3yGN7yXCU4iFzsQ7r7Z\
-aeixHgFk0fTr0z2LKI9XHpvGkXz-C7Yd"
+TOKEN = "BQAzEL4kQ1OuIhOnBALwuTOhVPYpDriZPP7vMFW56JKTeW-Tcow4-3_nRWJlYQNesogUg8F0avl950APNFxXvq8dmJlMrxEOHjGGTvZBNfWo9LCUsT7Ujf2gd-dNxIBydDPUvdHpeqdp5kp4WY-4U6zME5nxLvFeoMB8"
+
+
+def transform(df: pd.DataFrame) -> bool:
+    """Returns True if data is valid, False if not."""
+    if df.empty:
+        print("No songs downloaded. Finishing execution.")
+        return False
+    if not pd.Series(df['played_at']).is_unique:
+        raise Exception("Primary key check is violated.")
+    if df.isnull().values.any():
+        raise Exception("Null values found.")
+    # yesterday = datetime.now() - timedelta(days=1)
+    # yesterday = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+    # timestamps = df['timestamps'].tolist()
+    # for timestamp in timestamps:
+    #     if datetime.strptime(timestamp, "%Y-%m-%d") != yesterday:
+    #         raise Exception("At least one of the returned songs doesnt have a yesterday timestamp")
+    return True
+
 
 if __name__ == "__main__":
     headers = {
@@ -27,6 +44,7 @@ me/player/recently-played?after={yesterday_unix_timestamp}",
     artists = []
     played_at = []
     timestamps = []
+    print(data)
     for item in data['items']:
         songs.append(item['track']['name'])
         albums.append(item['track']['album']['name'])
@@ -43,3 +61,4 @@ me/player/recently-played?after={yesterday_unix_timestamp}",
     }
     songs_df = pd.DataFrame(songs_dict)
     print(songs_df)
+    print(transform(songs_df))
